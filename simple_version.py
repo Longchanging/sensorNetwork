@@ -4,7 +4,7 @@
 @author:  Lanqing
 @Func:    src.simple_version
 '''
-import pandas as pd, matplotlib.pyplot as plt, numpy as np, os
+import pandas as pd, numpy as np, os
 from sklearn.model_selection import cross_val_score
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
@@ -13,13 +13,13 @@ from sklearn import preprocessing
 input_folder, label_folder = '../data/input/scene_present/accel_fast/', '../data/tmp/'
 
 def data_prepare():
+    #### target data format:  (people), X, Y, Z,label
     info = []
     count = 0
     for i in range(18): 
-        print(i)
-        print(count)
+        print('people : ', i, 'Lines of data: ', count)
         if os.path.exists(input_folder + str('%.2d' % (i + 1)) + '.csv'):
-            man_file = pd.read_csv(input_folder + str('%.2d' % (i + 1)) + '.csv')  # read
+            man_file = pd.read_csv(input_folder + str('%.2d' % (i + 1)) + '.csv')  # read per person acce data
             man_file.columns = ['Tid', 'X', 'Y', 'Z']
             label_file = pd.read_csv(label_folder + str(i + 1) + '.csv')
             for t in range(0, 20000):  # Fetch data of per time-stamp
@@ -29,8 +29,8 @@ def data_prepare():
                     count += 1
                     label_now = label_file[np.abs(label_file['Time'] - real_time) < 3 ] if \
                       not label_file[np.abs(label_file['Time'] - real_time) < 3 ].empty else label_file.iloc[[-1, -2], :]
-                    X, Y, Z = df_now['X'].mean(), df_now['Y'].mean(), df_now['Z'].mean()
-                    label = label_now['GroupID'].iloc[0]
+                    X, Y, Z = df_now['X'].mean(), df_now['Y'].mean(), df_now['Z'].mean()  # calculate mean
+                    label = label_now['GroupID'].iloc[0] 
                     info.append([i + 1, X, Y, Z, label])
     df = pd.DataFrame(info)
     df.columns = ['People', 'acceX', 'acceY', 'acceZ', 'label']
@@ -38,6 +38,7 @@ def data_prepare():
     df.to_csv(label_folder + 'data.csv')
 
 def classify():
+    ##### classify using KNN and RF
     data_ = pd.read_csv(label_folder + 'data.csv')
     data_ = data_.sample(frac=0.1, random_state=1)  # sample
     data_.fillna(0, inplace=True)
