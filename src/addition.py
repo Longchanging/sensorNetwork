@@ -10,9 +10,12 @@ import pandas as pd, numpy as np
 from sklearn.model_selection import cross_val_score
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
 from sklearn import preprocessing
 from src.config import  train_data_rate, train_folders
-from src.functions import generate_configs
+from sklearn.model_selection import train_test_split
+from src.functions import generate_configs, validatePR
+from sklearn import metrics
 
 input_folder, label_folder = '../data/input/scene_present/accel_fast/', '../data/tmp/'
 
@@ -76,7 +79,7 @@ def get_useful_df(all_df_list):
                 if (i + 1) == sensor_per_man_name:
                     info_complete[i + 1] += 1
                     tmp_dict.append(all_df_list[sensor_name][sensor_per_man])
-                    if info_complete[i + 1] == 3:
+                    if info_complete[i + 1] == len(train_folders):
                         complete_info_manID.append(i + 1)
                         all_person_info.append(tmp_dict)
                     # print(all_df_list[sensor_name][sensor_per_man])
@@ -165,6 +168,51 @@ def classify():
     model2 = RandomForestClassifier(n_estimators=200)
     scores2 = cross_val_score(model2, data, label, cv=10, scoring='accuracy')
     print(scores1, scores2, '\n', np.mean(scores1), np.mean(scores2))
+
+def classify_output_confusion_matrix():
+    from sklearn import tree
+    import matplotlib.pyplot as plt
+    from sklearn.decomposition import PCA
+    # pca = PCA(n_components=2)
     
-prepare_data()
-classify()
+    data_ = pd.read_csv(label_folder + 'All_data.csv')
+    data_ = data_.sample(frac=0.2, random_state=1)  # sample
+    data_.fillna(0, inplace=True)
+
+    print(data_.describe())
+    data = data_.iloc[:, :-1]
+    label = data_.iloc[:, -1]
+    data = preprocessing.MinMaxScaler().fit_transform(data)
+    # data = pca.fit_transform(data)
+    
+    X_train, X_test, y_train, y_test = train_test_split(data, label, test_size=0.2, random_state=1, shuffle=True)  
+    
+    # model2 = KNeighborsClassifier()
+    # model2 = RandomForestClassifier(n_estimators=200)
+    model2 = tree.DecisionTreeClassifier(max_depth=15)  # (max_depth=5, min_samples_leaf=5000)  # (max_depth=5, max_leaf_nodes=10)
+    # model2 = SVC(kernel='rbf', probability=True)
+    
+    model2.fit(X_train, y_train)
+    y_pred = model2.predict(X_test)
+    
+    Precise, Recall, F1Score, Micro_average, accuracy_all = validatePR(y_pred, y_test)
+    print('Precise, Recall, F1Score, Micro_average, accuracy_all:', '\n',
+          Precise, Recall, F1Score, Micro_average, '\n',
+          accuracy_all)
+    
+    s1 = metrics.accuracy_score(y_test, y_pred)
+    f2 = metrics.confusion_matrix(y_test, y_pred)
+    print('\n', s1, '\n', f2)
+
+    # import graphviz
+    # dot_data = tree.export_graphviz(model2, out_file=None) 
+    # graph = graphviz.Source(dot_data) 
+    # graph.render("UseAudioData") 
+    
+    from src.classify_boundary_plot import plot_decision_boundary
+    print('data', data, 'label', label.values)
+    plot_decision_boundary(model2, X=data, Y=label.values)
+    plt.show()
+    
+# prepare_data()
+classify_output_confusion_matrix()
