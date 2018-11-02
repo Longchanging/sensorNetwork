@@ -41,7 +41,10 @@ datas = shuffled_data[:, :-1]
 labels = shuffled_data[:, -1]
 rows, cols = datas.shape
 
-# Early Fusion
+#################   Prepare different data for CNN  ###################
+
+#### Early fusion
+
 list_all_data, list_all_label = [], []
 for label in unique_labels:
     if label != 0.0:
@@ -60,12 +63,11 @@ for label in unique_labels:
         print(per_label.shape)
         list_all_label.append(per_label)
     
-# finish and process
-all_data = vstack_list(list_all_data)   
+all_data = vstack_list(list_all_data)  # finish and process
 all_data = MinMaxScaler().fit_transform(all_data)  # min max
 all_label = vstack_list(list_all_label)   
 le = LabelEncoder()
 all_label = np.array(le.fit_transform(all_label))  # label encoder
 all_label = all_label.reshape([len(all_label), 1])
 all_info = np.hstack((all_data, all_label))
-np.savetxt(tmp_path_base + 'EarlyFusion.csv', all_info)
+np.savetxt(tmp_path_base + 'EarlyFusion.csv', all_info)    
